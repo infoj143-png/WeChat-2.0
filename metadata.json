@@ -1,0 +1,6 @@
+{
+  "name": "WeChat 2.0",
+  "description": "A premium, modern global messaging application with dual-mode secure Firebase syncing and rich call UIs, custom voice notes, and beautiful transitions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
