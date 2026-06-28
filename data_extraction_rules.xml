@@ -1,0 +1,137 @@
+package com.infoj143.wechat20.ui.screens
+
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.infoj143.wechat20.data.ServiceLocator
+import com.infoj143.wechat20.navigation.ChatRoutes
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+@Composable
+fun SplashScreen(onNavigate: (String) -> Unit) {
+    val scale = remember { Animatable(0f) }
+    val opacity = remember { Animatable(0f) }
+
+    LaunchedEffect(Unit) {
+        // Animate scale & opacity
+        launch {
+            scale.animateTo(
+                targetValue = 1.2f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+            scale.animateTo(1.0f, animationSpec = tween(150))
+        }
+        launch {
+            opacity.animateTo(1f, animationSpec = tween(800))
+        }
+        
+        delay(2500)
+        
+        // Dynamic routing check
+        val hasUser = ServiceLocator.repository.currentUser.value != null
+        if (hasUser) {
+            onNavigate(ChatRoutes.HOME)
+        } else {
+            onNavigate(ChatRoutes.AUTH)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.scale(scale.value)
+        ) {
+            // Overlapping Premium Chat Icon - Bold Theme variant
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Forum,
+                        contentDescription = "WeChat 2.0 Logo",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(54.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "WeChat 2.0",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-1).sp
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Secure Global Messenger",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.sp
+            )
+        }
+        
+        // Elegant Bottom Brand
+        Text(
+            text = "PREMIUM EDITION",
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 2.sp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 48.dp)
+        )
+    }
+}

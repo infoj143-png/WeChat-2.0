@@ -1,0 +1,60 @@
+package com.infoj143.wechat20.models
+
+import java.util.UUID
+
+enum class MessageType {
+    TEXT, IMAGE, VOICE
+}
+
+enum class MessageStatus {
+    SENT, DELIVERED, SEEN
+}
+
+enum class CallStatus {
+    DIALING, RINGING, CONNECTED, DISCONNECTED, REJECTED, MISSED
+}
+
+data class User(
+    val id: String = "",
+    val phoneNumber: String = "",
+    val name: String = "",
+    val profilePhotoUrl: String = "",
+    val status: String = "Available",
+    val isOnline: Boolean = false,
+    val lastActive: Long = System.currentTimeMillis(),
+    val isTypingTo: String? = null // target user id if typing
+) {
+    val initials: String
+        get() = name.split(" ")
+            .filter { it.isNotEmpty() }
+            .take(2)
+            .joinToString("") { it.take(1).uppercase() }
+            .ifEmpty { "U" }
+}
+
+data class Message(
+    val id: String = UUID.randomUUID().toString(),
+    val senderId: String = "",
+    val receiverId: String = "",
+    val content: String = "",
+    val timestamp: Long = System.currentTimeMillis(),
+    val type: MessageType = MessageType.TEXT,
+    val status: MessageStatus = MessageStatus.SENT,
+    val durationSec: Int = 0, // for voice messages
+    val mediaUrl: String? = null // for image or voice files
+)
+
+data class ChatSession(
+    val peer: User,
+    val lastMessage: Message?,
+    val unreadCount: Int = 0
+)
+
+data class CallSession(
+    val callId: String = UUID.randomUUID().toString(),
+    val peer: User,
+    val isIncoming: Boolean = false,
+    val isVideo: Boolean = false,
+    val status: CallStatus = CallStatus.DIALING,
+    val startTime: Long = 0L
+)

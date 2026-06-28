@@ -1,0 +1,29 @@
+package com.infoj143.wechat20.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// "Bold Typography" Theme Colors
+val PurplePrimary = Color(0xFF6750A4)      // Deep purple primary
+val PurpleLight = Color(0xFFEADDFF)        // Soft lavender background/pill container
+val PurpleInactive = Color(0xFFE7E0EC)     // Soft lilac/gray inactive container
+val PurpleTertiary = Color(0xFFD0BCFF)     // Bright lilac highlight
+val PurpleDarkText = Color(0xFF21005D)     // Extremely dark purple text
+val CharcoalActive = Color(0xFF1C1B1F)     // Primary high-contrast text / active color
+val CharcoalMedium = Color(0xFF49454F)     // Secondary focus/medium text color
+val ThemeBackgroundLight = Color(0xFFFDFBFF) // Soft pure off-white background
+val ThemeSurfaceLight = Color(0xFFFFFFFF)  // Pure white
+
+// Keep a dark theme companion if required, styled around dark purple/slate
+val DarkBackground = Color(0xFF0F0B19)     // Rich deep indigo dark background
+val DarkSurface = Color(0xFF19142A)        // Slate-purple surface
+val DarkCard = Color(0xFF241E3D)           // Surface card accent
+
+// Bubbles (custom styled for high contrast and bubble accenting)
+val BubbleMeLight = Color(0xFFEADDFF)      // Me bubble is soft lavender
+val BubbleOtherLight = Color(0xFFE7E0EC)   // Other bubble is light gray lilac
+val BubbleMeDark = Color(0xFF6750A4)       // Me bubble in dark theme is deep purple
+val BubbleOtherDark = Color(0xFF241E3D)    // Other bubble in dark theme is dark card slate
+
+val AccentRed = Color(0xFFEF4444)          // Reject/Hangup Red
+val AccentGreen = Color(0xFF22C55E)        // Accept Green
+val AccentGold = Color(0xFFF59E0B)         // Alert Yellow

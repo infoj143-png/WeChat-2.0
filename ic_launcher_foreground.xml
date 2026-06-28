@@ -1,0 +1,10 @@
+package com.infoj143.wechat20.data
+
+import com.infoj143.wechat20.repository.AppRepositoryManager
+
+object ServiceLocator {
+    // Single source of truth repositories
+    val repository: AppRepositoryManager by lazy {
+        AppRepositoryManager()
+    }
+}

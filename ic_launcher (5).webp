@@ -1,0 +1,594 @@
+package com.infoj143.wechat20.ui.screens
+
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.infoj143.wechat20.models.ChatSession
+import com.infoj143.wechat20.models.MessageType
+import com.infoj143.wechat20.models.User
+import com.infoj143.wechat20.viewmodel.HomeViewModel
+import java.text.SimpleDateFormat
+import java.util.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    viewModel: HomeViewModel,
+    onNavigateToChat: (String) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToVoiceCall: (String, Boolean) -> Unit,
+    onNavigateToVideoCall: (String, Boolean) -> Unit
+) {
+    val chatSessions by viewModel.chatSessions.collectAsState()
+    val contacts by viewModel.contacts.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
+
+    var activeTab by remember { mutableStateOf(0) } // 0: Chats, 1: Contacts
+    var showNewChatDialog by remember { mutableStateOf(false) }
+    var selectedContactForSimCall by remember { mutableStateOf<User?>(null) }
+
+    // Navigation trigger for calling
+    LaunchedEffect(Unit) {
+        // Safe lifecycle listeners
+    }
+
+    Scaffold(
+        topBar = {
+            LargeTopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth().padding(end = 16.dp)
+                    ) {
+                        Column {
+                            Text(
+                                "WeChat 2.0",
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 28.sp,
+                                letterSpacing = (-1).sp
+                            )
+                            Text(
+                                currentUser?.name ?: "Guest User",
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        IconButton(
+                            onClick = onNavigateToSettings,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onBackground)
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showNewChatDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.testTag("new_chat_fab")
+            ) {
+                Icon(Icons.Default.Chat, contentDescription = "New Chat")
+            }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.updateSearchQuery(it) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .testTag("search_input"),
+                    placeholder = { Text("Search chats or contacts...", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f), fontWeight = FontWeight.Bold) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onBackground)
+                            }
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    singleLine = true
+                )
+
+                // Navigation Tabs Selector (Gradients style)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (activeTab == 0) MaterialTheme.colorScheme.primary else Color.Transparent)
+                            .clickable { activeTab = 0 }
+                            .testTag("chats_tab"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Chats",
+                            color = if (activeTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 14.sp,
+                            letterSpacing = (-0.25).sp
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (activeTab == 1) MaterialTheme.colorScheme.primary else Color.Transparent)
+                            .clickable { activeTab = 1 }
+                            .testTag("contacts_tab"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Contacts Directory",
+                            color = if (activeTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 14.sp,
+                            letterSpacing = (-0.25).sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // List contents based on Search or Active Tabs
+                val showSearch = searchQuery.trim().isNotEmpty()
+                if (showSearch) {
+                    Text(
+                        text = "Search Results",
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(start = 20.dp, bottom = 8.dp)
+                    )
+                    
+                    if (searchResults.isEmpty()) {
+                        EmptyStatePlaceholder("No matching contacts found")
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(searchResults) { user ->
+                                ContactItemRow(
+                                    user = user,
+                                    onClick = { onNavigateToChat(user.id) },
+                                    onCallSimClick = { selectedContactForSimCall = user }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    if (activeTab == 0) {
+                        // CHATS TAB
+                        if (chatSessions.isEmpty()) {
+                            EmptyStatePlaceholder("No conversations yet. Tap the Chat FAB below to start WeChatting!")
+                        } else {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(chatSessions) { session ->
+                                    ChatSessionItemRow(
+                                        session = session,
+                                        onClick = { onNavigateToChat(session.peer.id) }
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        // CONTACTS DIRECTORY TAB
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(contacts) { contact ->
+                                ContactItemRow(
+                                    user = contact,
+                                    onClick = { onNavigateToChat(contact.id) },
+                                    onCallSimClick = { selectedContactForSimCall = contact }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Quick Simulated Call Trigger Sheet
+            selectedContactForSimCall?.let { contact ->
+                AlertDialog(
+                    onDismissRequest = { selectedContactForSimCall = null },
+                    containerColor = Color(0xFF1E293B),
+                    title = { Text("Call Simulation", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+                    text = {
+                        Text(
+                            "Test calling ${contact.name}. You can trigger an instant calling preview.",
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    },
+                    confirmButton = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    val targetId = contact.id
+                                    selectedContactForSimCall = null
+                                    viewModel.triggerSimulatedCall(contact, isVideo = false)
+                                    onNavigateToVoiceCall(targetId, true)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D9488))
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Voice")
+                                }
+                            }
+                            Button(
+                                onClick = {
+                                    val targetId = contact.id
+                                    selectedContactForSimCall = null
+                                    viewModel.triggerSimulatedCall(contact, isVideo = true)
+                                    onNavigateToVideoCall(targetId, true)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2EC4B6))
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Video")
+                                }
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { selectedContactForSimCall = null }) {
+                            Text("Cancel", color = Color.White.copy(alpha = 0.5f))
+                        }
+                    }
+                )
+            }
+
+            // New Conversation Quick Sheet
+            if (showNewChatDialog) {
+                AlertDialog(
+                    onDismissRequest = { showNewChatDialog = false },
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    title = { Text("New Conversation", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Select a profile to message:", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            LazyColumn(modifier = Modifier.height(240.dp)) {
+                                items(contacts) { contact ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                showNewChatDialog = false
+                                                onNavigateToChat(contact.id)
+                                            }
+                                            .padding(vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                        ) {
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(LocalContext.current)
+                                                    .data(contact.profilePhotoUrl)
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(contact.name, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showNewChatDialog = false }) {
+                            Text("Dismiss", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ChatSessionItemRow(
+    session: ChatSession,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val sdf = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Profile Image with Active status badge
+        Box(
+            modifier = Modifier
+                .size(54.dp),
+            contentAlignment = Alignment.BottomEnd
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(session.peer.profilePhotoUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = session.peer.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            if (session.peer.isOnline) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF22C55E))
+                        .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Name & Last message block
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = session.peer.name,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    letterSpacing = (-0.25).sp
+                )
+                Text(
+                    text = session.lastMessage?.let { sdf.format(Date(it.timestamp)) } ?: "",
+                    color = if (session.unreadCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    fontWeight = if (session.unreadCount > 0) FontWeight.ExtraBold else FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val isTyping = session.peer.isTypingTo == "me"
+                val textContent = if (isTyping) {
+                    "typing..."
+                } else {
+                    when (session.lastMessage?.type) {
+                        MessageType.IMAGE -> "📷 Photo Attachment"
+                        MessageType.VOICE -> "🎙️ Voice Message (${session.lastMessage.durationSec}s)"
+                        else -> session.lastMessage?.content ?: ""
+                    }
+                }
+                
+                Text(
+                    text = textContent,
+                    color = if (isTyping) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    fontSize = 14.sp,
+                    fontWeight = if (session.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (session.unreadCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = session.unreadCount.toString(),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ContactItemRow(
+    user: User,
+    onClick: () -> Unit,
+    onCallSimClick: () -> Unit
+) {
+    val context = LocalContext.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Avatar circle
+        Box(
+            modifier = Modifier
+                .size(48.dp),
+            contentAlignment = Alignment.BottomEnd
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(user.profilePhotoUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = user.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            if (user.isOnline) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF22C55E))
+                        .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Name & Bio Status
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = user.name,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp,
+                letterSpacing = (-0.25).sp
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = user.status,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // Demo calling button
+        IconButton(
+            onClick = onCallSimClick,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
+        ) {
+            Icon(Icons.Default.PhoneCallback, contentDescription = "Simulate call", tint = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+fun EmptyStatePlaceholder(msg: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Forum,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+            modifier = Modifier.size(72.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = msg,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+    }
+}

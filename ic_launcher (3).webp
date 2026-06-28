@@ -1,0 +1,18 @@
+package com.infoj143.wechat20.navigation
+
+object ChatRoutes {
+    const val SPLASH = "splash"
+    const val AUTH = "auth"
+    const val PROFILE_SETUP = "profile_setup"
+    const val HOME = "home"
+    const val CHAT = "chat/{peerId}"
+    const val VOICE_CALL = "voice_call/{peerId}/{isIncoming}"
+    const val VIDEO_CALL = "video_call/{peerId}/{isIncoming}"
+    const val SETTINGS = "settings"
+
+    fun chatRoute(peerId: String) = "chat/$peerId"
+    
+    fun voiceCallRoute(peerId: String, isIncoming: Boolean) = "voice_call/$peerId/$isIncoming"
+    
+    fun videoCallRoute(peerId: String, isIncoming: Boolean) = "video_call/$peerId/$isIncoming"
+}
